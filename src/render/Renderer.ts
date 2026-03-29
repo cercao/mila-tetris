@@ -24,26 +24,38 @@ export interface Layout {
   isMobile: boolean
 }
 
+const MOBILE_SIDE_PANEL_W = 84
+
 function computeLayout(canvas: HTMLCanvasElement): Layout {
   const W = canvas.width
   const H = canvas.height
   const isMobile = W < 600
 
   const availH = isMobile ? H - MOBILE_BTN_H : H
-  const maxBoardH = availH * (isMobile ? 0.84 : 0.90)
-  const cellSize = Math.floor(maxBoardH / ROWS)
-  const boardW = cellSize * COLS
-  const boardH = cellSize * ROWS
-  const panelW = isMobile ? W : Math.max(130, Math.min(190, W - boardW - 40))
 
-  let boardX: number, boardY: number, panelX: number, panelY: number
+  let cellSize: number, boardX: number, boardY: number
+  let boardW: number, boardH: number
+  let panelX: number, panelY: number, panelW: number
 
   if (isMobile) {
-    boardX = Math.floor((W - boardW) / 2)
-    boardY = 8
-    panelX = 0
-    panelY = boardY + boardH + 6
+    // Board on the left, info panel on the right
+    const boardMaxW = W - 4 - MOBILE_SIDE_PANEL_W - 4
+    const cellByW = Math.floor(boardMaxW / COLS)
+    const cellByH = Math.floor((availH - 10) / ROWS)
+    cellSize = Math.min(cellByW, cellByH, 32)
+    boardW = cellSize * COLS
+    boardH = cellSize * ROWS
+    boardX = 4
+    boardY = Math.floor((availH - boardH) / 2)
+    panelX = boardX + boardW + 4
+    panelY = boardY
+    panelW = W - panelX - 2
   } else {
+    const maxBoardH = availH * 0.90
+    cellSize = Math.floor(maxBoardH / ROWS)
+    boardW = cellSize * COLS
+    boardH = cellSize * ROWS
+    panelW = Math.max(130, Math.min(190, W - boardW - 40))
     boardX = Math.floor((W - boardW - panelW) / 2)
     boardY = Math.floor((H - boardH) / 2)
     panelX = boardX + boardW + 16
@@ -303,49 +315,89 @@ export class Renderer {
   private drawMobilePanel(
     score: ScoreState,
     nextPiece: PieceState | null,
-    _holdPiece: PieceState | null,
+    holdPiece: PieceState | null,
     milaMode: boolean,
   ) {
-    const { ctx, canvas, layout } = this
-    const { boardY, boardH } = layout
-    const W = canvas.width
-    // Panel sits between board and the button bar
-    const panelY = boardY + boardH + 4
-    const panelH = canvas.height - MOBILE_BTN_H - panelY - 2
-    const midY = panelY + panelH / 2
+    const { ctx, layout } = this
+    const { panelX, panelY, panelW, boardH } = layout
 
-    // Score — left side
-    ctx.save()
-    ctx.textAlign = 'left'
-    ctx.font = `9px system-ui`; ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.fillText('PONTOS', 12, midY - 10)
-    ctx.font = `bold 18px system-ui`; ctx.fillStyle = '#fff'
-    ctx.fillText(score.score.toLocaleString('pt-BR'), 12, midY + 8)
-    ctx.restore()
-
-    // Level + Lines — centre
-    ctx.save()
-    ctx.textAlign = 'center'
-    ctx.font = `9px system-ui`; ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.fillText('NÍV.', W / 2 - 30, midY - 10)
-    ctx.font = `bold 18px system-ui`; ctx.fillStyle = '#fff'
-    ctx.fillText(String(score.level), W / 2 - 30, midY + 8)
-
-    ctx.font = `9px system-ui`; ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.fillText('LIN.', W / 2 + 30, midY - 10)
-    ctx.font = `bold 18px system-ui`; ctx.fillStyle = '#fff'
-    ctx.fillText(String(score.lines), W / 2 + 30, midY + 8)
-    ctx.restore()
-
-    // Next piece — right side
-    const cs = Math.max(12, Math.min(16, Math.floor(panelH * 0.4)))
+    const cs = Math.min(18, Math.floor((panelW - 6) / 4))
     const boxSize = cs * 4
-    drawMiniBox(ctx, nextPiece, 'PRÓX.', W - boxSize - 8, panelY + (panelH - boxSize) / 2, boxSize, cs)
+    const cx = panelX + panelW / 2
 
-    if (milaMode) {
+    let y = panelY + 4
+
+    // Helper: centered label
+    const label = (text: string, yy: number, alpha = 0.4) => {
       ctx.save()
-      ctx.font = `9px system-ui`; ctx.fillStyle = '#CE93D8'; ctx.textAlign = 'left'
-      ctx.fillText('✦ Mila', 12, midY + 24)
+      ctx.font = `9px system-ui`
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`
+      ctx.textAlign = 'center'
+      ctx.fillText(text, cx, yy)
+      ctx.restore()
+    }
+
+    const bx = panelX + (panelW - boxSize) / 2
+
+    // Next piece
+    label('PRÓX.', y + 10)
+    y += 14
+    ctx.save()
+    ctx.fillStyle = '#0d0d14'; ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1
+    ctx.fillRect(bx, y, boxSize, boxSize); ctx.strokeRect(bx, y, boxSize, boxSize)
+    ctx.restore()
+    if (nextPiece) drawMiniPiece(ctx, nextPiece, bx + boxSize / 2, y + boxSize / 2, cs)
+    y += boxSize + 10
+
+    // Hold piece
+    label('SEG.', y + 10)
+    y += 14
+    ctx.save()
+    ctx.fillStyle = '#0d0d14'; ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1
+    ctx.fillRect(bx, y, boxSize, boxSize); ctx.strokeRect(bx, y, boxSize, boxSize)
+    ctx.restore()
+    if (holdPiece) drawMiniPiece(ctx, holdPiece, bx + boxSize / 2, y + boxSize / 2, cs)
+    y += boxSize + 16
+
+    // Divider
+    ctx.save()
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(panelX + 4, y); ctx.lineTo(panelX + panelW - 4, y); ctx.stroke()
+    ctx.restore()
+    y += 10
+
+    // Stats
+    const stats = [
+      { label: 'PTS', value: score.score.toLocaleString('pt-BR') },
+      { label: 'NÍV', value: String(score.level) },
+      { label: 'LIN', value: String(score.lines) },
+    ]
+    for (const s of stats) {
+      label(s.label, y)
+      y += 13
+      ctx.save()
+      ctx.font = `bold 15px system-ui`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'
+      ctx.fillText(s.value, cx, y)
+      ctx.restore()
+      y += 18
+    }
+
+    // Mila Mode indicator
+    if (milaMode) {
+      y += 4
+      ctx.save()
+      ctx.font = `bold 10px system-ui`; ctx.fillStyle = '#CE93D8'; ctx.textAlign = 'center'
+      ctx.fillText('✦ Mila', cx, y)
+      ctx.restore()
+    }
+
+    // Remaining space — subtle lines label at bottom of panel
+    const bottomY = panelY + boardH - 4
+    if (bottomY - y > 20) {
+      ctx.save()
+      ctx.font = `8px system-ui`; ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.textAlign = 'center'
+      ctx.fillText('tap = girar', cx, bottomY - 12)
+      ctx.fillText('swipe ↓ = cair', cx, bottomY)
       ctx.restore()
     }
   }
