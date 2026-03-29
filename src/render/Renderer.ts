@@ -374,12 +374,12 @@ export class Renderer {
     ]
     for (const s of stats) {
       label(s.label, y)
-      y += 13
+      y += 15
       ctx.save()
-      ctx.font = `bold 15px system-ui`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'
+      ctx.font = `bold 17px system-ui`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'
       ctx.fillText(s.value, cx, y)
       ctx.restore()
-      y += 18
+      y += 26
     }
 
     // Mila Mode indicator

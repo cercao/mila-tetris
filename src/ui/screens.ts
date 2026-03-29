@@ -330,7 +330,13 @@ export function showPauseScreen(opts: PauseOptions): () => void {
   return () => screen.remove()
 }
 
-// Bottom control bar + overlay buttons for mobile
+// SVG icons for mobile control buttons
+const BTN_LEFT = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6L9 12L15 18" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+const BTN_RIGHT = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6L15 12L9 18" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+const BTN_DROP = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4v12" stroke="#00BCD4" stroke-width="3.5" stroke-linecap="round"/><path d="M6 12l6 7 6-7" stroke="#00BCD4" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+const BTN_ROTATE = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12a9 9 0 1 1-2.6-6.4" stroke="#CE93D8" stroke-width="3" stroke-linecap="round"/><polyline points="21,3 21,9 15,9" stroke="#CE93D8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+
+// Bottom control bar + overlay pause button for mobile
 export function createMobileButtons(
   onLeft: () => void,
   onRight: () => void,
@@ -350,7 +356,7 @@ export function createMobileButtons(
       padding: 8px 10px;
       padding-bottom: max(8px, env(safe-area-inset-bottom));
       z-index: 50; box-sizing: border-box;
-      gap: 8px;
+      gap: 6px;
     }
     .ctrl-btn {
       flex: 1;
@@ -360,7 +366,7 @@ export function createMobileButtons(
       background: rgba(255,255,255,0.07);
       color: #fff;
       font-family: system-ui, -apple-system, sans-serif;
-      font-size: 28px;
+      font-size: 14px;
       cursor: pointer;
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
@@ -374,7 +380,7 @@ export function createMobileButtons(
     .ctrl-btn-rotate {
       background: rgba(156,39,176,0.25);
       border-color: rgba(156,39,176,0.5);
-      flex: 1.4;
+      flex: 1.3;
     }
     .ctrl-btn-rotate:active, .ctrl-btn-rotate.pressing {
       background: rgba(156,39,176,0.5);
@@ -382,9 +388,14 @@ export function createMobileButtons(
     .ctrl-btn-drop {
       background: rgba(0,188,212,0.15);
       border-color: rgba(0,188,212,0.35);
+      flex: 1.3;
     }
     .ctrl-btn-drop:active, .ctrl-btn-drop.pressing {
       background: rgba(0,188,212,0.35);
+    }
+    .ctrl-btn-hold {
+      font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.7);
     }
     .overlay-btn {
       position: fixed;
@@ -402,10 +413,10 @@ export function createMobileButtons(
   `
   document.head.appendChild(style)
 
-  function makeRepeatBtn(text: string, onPress: () => void, extraClass = ''): HTMLButtonElement {
+  function makeRepeatBtn(html: string, onPress: () => void, extraClass = ''): HTMLButtonElement {
     const btn = document.createElement('button')
     btn.className = `ctrl-btn ${extraClass}`
-    btn.textContent = text
+    btn.innerHTML = html
 
     let dasTimer: ReturnType<typeof setTimeout> | null = null
     let interval: ReturnType<typeof setInterval> | null = null
@@ -431,10 +442,10 @@ export function createMobileButtons(
     return btn
   }
 
-  function makeTapBtn(text: string, onPress: () => void, extraClass = ''): HTMLButtonElement {
+  function makeTapBtn(html: string, onPress: () => void, extraClass = ''): HTMLButtonElement {
     const btn = document.createElement('button')
     btn.className = `ctrl-btn ${extraClass}`
-    btn.textContent = text
+    btn.innerHTML = html
     btn.addEventListener('touchstart', (e) => {
       e.preventDefault(); onPress(); btn.classList.add('pressing')
     }, { passive: false })
@@ -450,17 +461,12 @@ export function createMobileButtons(
   const bar = document.createElement('div')
   bar.className = 'ctrl-bar'
   bar.append(
-    makeRepeatBtn('←', onLeft),
-    makeTapBtn('↻', onRotate, 'ctrl-btn-rotate'),
-    makeTapBtn('⬇', onHardDrop, 'ctrl-btn-drop'),
-    makeRepeatBtn('→', onRight),
+    makeRepeatBtn(BTN_LEFT, onLeft),
+    makeTapBtn('SEG.', onHold, 'ctrl-btn-hold'),
+    makeTapBtn(BTN_ROTATE, onRotate, 'ctrl-btn-rotate'),
+    makeTapBtn(BTN_DROP, onHardDrop, 'ctrl-btn-drop'),
+    makeRepeatBtn(BTN_RIGHT, onRight),
   )
-
-  const holdBtn = document.createElement('button')
-  holdBtn.className = 'overlay-btn'
-  holdBtn.textContent = 'SEG.'
-  holdBtn.style.cssText = 'top: 10px; left: 10px;'
-  holdBtn.addEventListener('touchstart', (e) => { e.preventDefault(); onHold() }, { passive: false })
 
   const pauseBtn = document.createElement('button')
   pauseBtn.className = 'overlay-btn'
@@ -468,9 +474,9 @@ export function createMobileButtons(
   pauseBtn.style.cssText = 'top: 10px; right: 10px;'
   pauseBtn.addEventListener('touchstart', (e) => { e.preventDefault(); onPause() }, { passive: false })
 
-  document.body.append(bar, holdBtn, pauseBtn)
+  document.body.append(bar, pauseBtn)
 
   return () => {
-    bar.remove(); holdBtn.remove(); pauseBtn.remove(); style.remove()
+    bar.remove(); pauseBtn.remove(); style.remove()
   }
 }
