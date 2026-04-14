@@ -244,7 +244,7 @@ export function createMobileButtons(
       font-family: system-ui, -apple-system, sans-serif;
       font-size: 14px;
       cursor: pointer;
-      touch-action: manipulation;
+      touch-action: none;
       -webkit-tap-highlight-color: transparent;
       display: flex; align-items: center; justify-content: center;
       user-select: none;
@@ -295,7 +295,7 @@ export function createMobileButtons(
       btn.classList.remove('pressing')
     }
 
-    btn.addEventListener('touchstart', (e) => {
+    btn.addEventListener('pointerdown', (e) => {
       e.preventDefault()
       onPress()
       btn.classList.add('pressing')
@@ -304,8 +304,9 @@ export function createMobileButtons(
       }, 150)
     }, { passive: false })
 
-    btn.addEventListener('touchend', (e) => { e.preventDefault(); stop() }, { passive: false })
-    btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stop() }, { passive: false })
+    btn.addEventListener('pointerup', (e) => { e.preventDefault(); stop() }, { passive: false })
+    btn.addEventListener('pointercancel', (e) => { e.preventDefault(); stop() }, { passive: false })
+    btn.addEventListener('pointerleave', () => { stop() })
 
     return btn
   }
@@ -314,15 +315,18 @@ export function createMobileButtons(
     const btn = document.createElement('button')
     btn.className = `ctrl-btn ${extraClass}`
     btn.innerHTML = html
-    btn.addEventListener('touchstart', (e) => {
+    btn.addEventListener('pointerdown', (e) => {
       e.preventDefault(); onPress(); btn.classList.add('pressing')
     }, { passive: false })
-    btn.addEventListener('touchend', (e) => {
+    btn.addEventListener('pointerup', (e) => {
       e.preventDefault(); btn.classList.remove('pressing')
     }, { passive: false })
-    btn.addEventListener('touchcancel', (e) => {
+    btn.addEventListener('pointercancel', (e) => {
       e.preventDefault(); btn.classList.remove('pressing')
     }, { passive: false })
+    btn.addEventListener('pointerleave', () => {
+      btn.classList.remove('pressing')
+    })
     return btn
   }
 

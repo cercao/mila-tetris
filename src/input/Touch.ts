@@ -21,31 +21,31 @@ export class TouchInput {
 
   constructor(element: HTMLElement) {
     this.element = element
-    element.addEventListener('touchstart', this.onStart, { passive: false })
-    element.addEventListener('touchmove', this.onMove, { passive: false })
-    element.addEventListener('touchend', this.onEnd, { passive: false })
+    element.addEventListener('pointerdown', this.onStart, { passive: false })
+    element.addEventListener('pointermove', this.onMove, { passive: false })
+    element.addEventListener('pointerup', this.onEnd, { passive: false })
+    element.addEventListener('pointercancel', this.onEnd, { passive: false })
   }
 
   on(action: TouchAction, handler: () => void) {
     this.handlers[action] = handler
   }
 
-  private onStart = (e: TouchEvent) => {
+  private onStart = (e: PointerEvent) => {
     e.preventDefault()
-    const t = e.changedTouches[0]
-    this.startX = this.lastX = t.clientX
-    this.startY = this.lastY = t.clientY
+    this.startX = this.lastX = e.clientX
+    this.startY = this.lastY = e.clientY
     this.startTime = Date.now()
     this.moved = false
   }
 
-  private onMove = (e: TouchEvent) => {
+  private onMove = (e: PointerEvent) => {
+    if (e.buttons === 0) return
     e.preventDefault()
-    const t = e.changedTouches[0]
-    const dx = t.clientX - this.lastX
-    const dy = t.clientY - this.lastY
-    const totalDx = Math.abs(t.clientX - this.startX)
-    const totalDy = Math.abs(t.clientY - this.startY)
+    const dx = e.clientX - this.lastX
+    const dy = e.clientY - this.lastY
+    const totalDx = Math.abs(e.clientX - this.startX)
+    const totalDy = Math.abs(e.clientY - this.startY)
 
     if (totalDx > TAP_MAX_MOVE || totalDy > TAP_MAX_MOVE) this.moved = true
 
@@ -53,24 +53,23 @@ export class TouchInput {
     if (Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
       if (dx > 0) this.emit('moveRight')
       else this.emit('moveLeft')
-      this.lastX = t.clientX
-      this.lastY = t.clientY
+      this.lastX = e.clientX
+      this.lastY = e.clientY
       return
     }
 
     // Vertical soft drop — trigger per SOFT_DROP_THRESHOLD px
     if (dy >= SOFT_DROP_THRESHOLD && totalDy > totalDx) {
       this.emit('softDrop')
-      this.lastX = t.clientX
-      this.lastY = t.clientY
+      this.lastX = e.clientX
+      this.lastY = e.clientY
     }
   }
 
-  private onEnd = (e: TouchEvent) => {
+  private onEnd = (e: PointerEvent) => {
     e.preventDefault()
-    const t = e.changedTouches[0]
     const dt = Date.now() - this.startTime
-    const totalDy = t.clientY - this.startY
+    const totalDy = e.clientY - this.startY
 
     // Flick down = hard drop
     if (totalDy > SOFT_DROP_THRESHOLD && dt > 0) {
@@ -92,8 +91,9 @@ export class TouchInput {
   }
 
   destroy() {
-    this.element.removeEventListener('touchstart', this.onStart)
-    this.element.removeEventListener('touchmove', this.onMove)
-    this.element.removeEventListener('touchend', this.onEnd)
+    this.element.removeEventListener('pointerdown', this.onStart)
+    this.element.removeEventListener('pointermove', this.onMove)
+    this.element.removeEventListener('pointerup', this.onEnd)
+    this.element.removeEventListener('pointercancel', this.onEnd)
   }
 }
